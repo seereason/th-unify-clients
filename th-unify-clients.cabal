@@ -1,0 +1,50 @@
+name:               th-unify-clients
+version:            1.0
+cabal-version:      >= 1.10
+build-type:         Simple
+license:            BSD3
+category:           Template Haskell
+author:             David Fox
+copyright:          (c) David Fox
+maintainer:         David Fox <dsf@seereason.com>
+homepage:           https://github.com/seereason/th-unify-clients
+bug-reports:        https://github.com/seereason/th=unify-clients/issues
+stability:          experimental
+synopsis:           Some applications of the th-unify library
+description:
+  Replacements for deriveSafeCopy (from safecopy), derivePathInfo
+  (from web-routes), a function to compute phantom type variables, and
+  a few other goodies.
+library
+  default-language: Haskell2010
+  ghc-options: -Wall
+  hs-source-dirs: src
+  build-depends:
+    base >= 4.8 && < 5,
+    bytestring,
+    cereal,
+    containers,
+    Diff,
+    HUnit,
+    lens,
+    ListLike,
+    mtl,
+    parsec,
+    pretty,
+    safecopy,
+    split,
+    syb,
+    template-haskell,
+    text,
+    th-lift,
+    th-lift-instances,
+    th-unify,
+    web-routes
+  exposed-modules:
+    Data.THUnify.Constraints
+    Data.THUnify.Orphans
+    Data.THUnify.Prelude.SafeCopy
+    Data.THUnify.SafeCopy
+    Data.THUnify.Serialize
+    Data.THUnify.TestData
+    Data.THUnify.WebRoutesTH
