@@ -313,7 +313,7 @@ internalDeriveSafeCopy' deriveType versionId kindName typ info =
     decInfo (NewtypeD context _name tyvars con _derivs) = (context, tyvars, [con])
     instInfo (DataInstD context name ty cons _derivs) = (context, name, ty, cons)
     instInfo (NewtypeInstD context name ty con _derivs) = (context, name, ty, [con])
-    instInfo _ = fail $ "Can't derive SafeCopy instance for: " ++ show (typ, inst)
+    instInfo inst = error $ "Can't derive SafeCopy instance for: " ++ show (typ, inst)
 #endif
 #if MIN_VERSION_template_haskell(2,10,0)
     toClass name args = foldl appT (conT name) args
