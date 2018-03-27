@@ -31,6 +31,7 @@ import Data.Text (pack, unpack)
 import Data.UserId (UserId)
 import Data.Vector as Vector (fromList)
 import Debug.Show (V(V))
+import Extra.Orphans ()
 import GHC.Fingerprint.Type (Fingerprint)
 import Language.Haskell.TH
 import Language.Haskell.TH.Lift (deriveLift, lift)
