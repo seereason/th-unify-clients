@@ -7,39 +7,26 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
-{-# OPTIONS -fno-warn-unused-imports -fno-warn-orphans #-}
+{-# OPTIONS -Wall -fno-warn-orphans -ddump-minimal-imports #-}
 
 module Data.THUnify.Orphans where
 
-#if 0
-import Control.Lens (Index, IxValue)
-import Data.Bifunctor (Bifunctor(bimap))
 import Data.ByteString (ByteString)
-import Data.Function.Memoize (deriveMemoizable)
-import Data.Generics (Data, TyCon, TypeRep, tyConFingerprint, tyConModule, tyConName, tyConPackage, splitTyConApp)
+import Data.Generics (TyCon, TypeRep, tyConFingerprint, tyConModule, tyConName, tyConPackage, splitTyConApp)
 import Data.Int (Int32)
 import Data.List (intercalate)
 import Data.ListLike as LL
-import Data.Map as Map (Map, mapKeys, toList)
-import Data.Order (fromMapVecKey, fromPairs, nextKey, Order, {-Order_0(..),-} OrderError(..), toKeys, toMap, toPairs)
-import Data.OrderedMap (OrderedMap)
+import Data.Map as Map (Map, toList)
 import Data.Proxy (Proxy(Proxy))
--- import Data.SafeCopy.Derive (deriveSafeCopy)
-import Data.SafeCopy (base)
-import Data.Serialize (Serialize(get, put))
+import Data.SafeCopy (base, deriveSafeCopy)
+import Data.Set as Set (Set, toList)
 import Data.Text (pack, unpack)
-import Data.UserId (UserId)
-import Data.Vector as Vector (fromList)
 import Debug.Show (V(V))
-import GHC.Fingerprint.Type (Fingerprint)
 import Language.Haskell.TH
-import Language.Haskell.TH.Lift (deriveLift, lift)
-import Language.Haskell.TH.Instances ()
 import Language.Haskell.TH.PprLib (Doc, hcat, ptext, vcat)
 import Language.Haskell.TH.Syntax (ModName, NameFlavour, OccName, PkgName)
 import Prelude hiding (concat, foldl1)
-import System.Process (CmdSpec(..))
-import Test.QuickCheck (Arbitrary(arbitrary), Gen, sized, vectorOf, shuffle)
+import Test.QuickCheck (Arbitrary(arbitrary))
 import Text.Parsec (count, many)
 --
 import Web.Routes
@@ -77,10 +64,6 @@ instance PathInfo [Int] where
     fromPathSegments = many fromPathSegments
 
 #if 0
-$(deriveLift ''G.Gr)
-$(deriveLift ''G.NodeMap)
-#endif
-
 $(deriveMemoizable ''Type)
 $(deriveMemoizable ''TyVarBndr)
 $(deriveMemoizable ''Name)
@@ -90,6 +73,7 @@ $(deriveMemoizable ''OccName)
 $(deriveMemoizable ''NameSpace)
 $(deriveMemoizable ''PkgName)
 $(deriveMemoizable ''ModName)
+#endif
 
 instance Ppr (Type, Int32) where
   ppr (t, n) = pprPair (t, n)
@@ -105,7 +89,7 @@ pprPair (a, b) = hcat [ptext "(", ppr a, ptext ",", ppr b, ptext ")"]
 pprList :: [Doc] -> Doc
 pprList xs = hcat [ptext "[", hcat (intersperse (ptext ",") xs), ptext "]"]
 
-deriving instance Data CmdSpec
+-- deriving instance Data CmdSpec
 
 #if 0
 instance Arbitrary ReportImageID where arbitrary = ReportImageID <$> arbitrary
@@ -122,7 +106,9 @@ instance Ppr Float where ppr = ptext . show
 -- instance Ppr ReportElemID where ppr = ptext . show
 -- instance Ppr ReportImageID where ppr = ptext . show
 instance (Ppr k, Ord k, {-Enum k,-} Show k, Ppr v) => Ppr (Map k v) where ppr = pprList . fmap pprPair . Map.toList
+#if 0
 instance (Ppr k, Ord k, Enum k, Show k, Ppr v) => Ppr (Order k v) where ppr = pprList . fmap pprPair . LL.toList . toPairs
+#endif
 instance Ppr (Int, Char) where ppr = ptext . show
 instance Ppr ByteString where ppr = ptext . show
 instance Arbitrary ByteString where arbitrary = pure mempty
@@ -146,4 +132,25 @@ instance Show (V TypeRep) where
 
 instance Ppr TypeRep where
   ppr = ptext . show
-#endif
+
+instance Ppr () where
+    ppr () = ptext "()"
+
+-- | 'Int' is the 'Data.Path.Index.ContainerKey' type for all lists, so
+-- we need to make sure all the required instances exist.
+instance Ppr Int where
+    ppr = ptext . show
+
+instance Ppr (Set Type, Set Type) where
+    ppr (extra, missing) = vcat [ptext "extra:", ppr extra, ptext "missing:", ppr missing]
+
+instance Ppr (Set Type) where
+    ppr s = hcat [ptext "Set.fromList [", ppr (Set.toList s), ptext "]"]
+
+$(deriveSafeCopy 0 'base ''OccName)
+$(deriveSafeCopy 0 'base ''NameSpace)
+$(deriveSafeCopy 0 'base ''PkgName)
+$(deriveSafeCopy 0 'base ''ModName)
+$(deriveSafeCopy 0 'base ''NameFlavour)
+$(deriveSafeCopy 0 'base ''Name)
+$(deriveSafeCopy 1 'base ''Loc)
