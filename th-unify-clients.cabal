@@ -1,5 +1,5 @@
 name:               th-unify-clients
-version:            1.0
+version:            1.0.2
 cabal-version:      >= 1.10
 build-type:         Simple
 license:            BSD3
@@ -45,7 +45,6 @@ library
   exposed-modules:
     Data.THUnify.Constraints
     Data.THUnify.Orphans
-    Data.THUnify.Prelude.SafeCopy
     Data.THUnify.SafeCopy
     Data.THUnify.Serialize
     Data.THUnify.TestData
