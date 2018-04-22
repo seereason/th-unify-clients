@@ -71,6 +71,8 @@ monomorphize typq = typq >>= \typ0 -> go typ0 $ decompose typ0
                -- Build the monomorphic type and apply substitutions
                withBindings vars vals (\unbound subst -> return (subst (compose (typ : vals'))))
 
+type Foo = RWST R (Set Pred) (Set Name) Q
+
 deriveConstraints :: Int -> Name -> Name -> [Type] -> Q (Set Pred)
 deriveConstraints verbosity0 constraint tyConName varTysExp = do
   typ <- monomorphize (pure (compose (ConT tyConName : varTysExp)))
@@ -92,20 +94,20 @@ deriveConstraints verbosity0 constraint tyConName varTysExp = do
         local (\r -> r {prefix = " " ++ prefix r}) $
           goType [] (compose (ConT tyConName : varTysExp))
 
-      goType :: [Type] -> Type -> RWST R (Set Pred) (Set Type) Q ()
+      goType :: [Type] -> Type -> Foo ()
       goType vals typ = do
-        visited <- get
-        when (not (Set.member typ visited)) $ do
-          modify (Set.insert typ)
-          message 1 ("goType " ++ pprint typ)
-          local (\r -> r {prefix = " " ++ prefix r}) $ do
-            message 1 ("ts=" ++ show (decompose typ))
-            goApply (decompose typ ++ vals)
+        -- visited <- get
+        -- when (not (Set.member typ visited)) $ do
+        --   modify (Set.insert typ)
+        message 1 ("goType " ++ pprint typ)
+        local (\r -> r {prefix = " " ++ prefix r}) $ do
+          message 2 ("ts=" ++ show (decompose typ))
+          goApply (decompose typ ++ vals)
 
       -- Process an unvisited type whose applications have been decomposed
-      goApply :: [Type] -> RWST R (Set Pred) (Set Type) Q ()
+      goApply :: [Type] -> Foo ()
       goApply [VarT name] = do
-        message 1 ("goApply name=" ++ pprint name)
+        message 2 ("goApply name=" ++ pprint name)
         -- params <- paramNames <$> ask
         -- Constraints are only interesting if they involve one of the
         -- type's parameters.
@@ -123,13 +125,19 @@ deriveConstraints verbosity0 constraint tyConName varTysExp = do
       goApply [ListT, val] = goType [] val
       goApply (TupleT _ : types) = mapM_ (goType []) types
       goApply (ConT tname : vals) = do
-        info <- lift (reify tname)
-        message 1 ("info=" ++ show info)
-        goInfo vals info
+        visited <- get
+        case (Set.member tname visited) of
+          True -> message 2 ("revisit: " ++ show tname)
+          False -> do
+            message 1 ("visiting: " ++ show tname)
+            modify (Set.insert tname)
+            info <- lift (reify tname)
+            message 2 ("info=" ++ show info)
+            goInfo vals info
       goApply (typ : _) = error ("goApplied - unexpected (unimplemented?) type: " ++ show typ ++ "\n typ0=" ++ pprint (compose (ConT tyConName : varTysExp)))
       goApply [] = error "Impossible value passed to goApplied"
 
-      goInfo :: [Type] -> Info -> RWST R (Set Pred) (Set Type) Q ()
+      goInfo :: [Type] -> Info -> Foo ()
       goInfo vals (TyConI (TySynD _tname vars typ)) =
         withBindings vars vals (\unbound subst -> goType unbound (subst typ))
       goInfo _vals (PrimTyConI _ _ _) = return ()
@@ -173,7 +181,7 @@ deriveConstraints verbosity0 constraint tyConName varTysExp = do
 #endif
       famInfo fam = error $ "unexpected Dec: " ++ pprint1 fam
 
-      goCon :: [Type] -> (Type -> Type) -> Con -> RWST R (Set Pred) (Set Type) Q ()
+      goCon :: [Type] -> (Type -> Type) -> Con -> Foo ()
       goCon vals subst (ForallC _ _ con) =
           goCon vals subst con
       goCon vals subst (NormalC _cname sts) =
