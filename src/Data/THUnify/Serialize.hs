@@ -4,6 +4,7 @@
 
 module Data.THUnify.Serialize
     ( deriveSerialize
+    , deriveSerializeVerbose
     ) where
 
 import Language.Haskell.TH
@@ -16,10 +17,13 @@ import Data.THUnify.Constraints (deriveConstraints, withBindings)
 import Data.THUnify.Prelude (toName)
 
 deriveSerialize :: TypeQ -> Q [Dec]
-deriveSerialize typq = location >>= \loc -> typq >>= \typ -> deriveSerialize' loc typ
+deriveSerialize typq = location >>= \loc -> typq >>= \typ -> deriveSerialize' 0 loc typ
 
-deriveSerialize' :: Loc -> Type -> Q [Dec]
-deriveSerialize' loc typ0 = do
+deriveSerializeVerbose :: TypeQ -> Q [Dec]
+deriveSerializeVerbose typq = location >>= \loc -> typq >>= \typ -> deriveSerialize' 2 loc typ
+
+deriveSerialize' :: Int -> Loc -> Type -> Q [Dec]
+deriveSerialize' v0 loc typ0 = do
   (: []) <$> goApply typ0 (decompose typ0)
     where
       goApply :: Type -> [Type] -> Q Dec
@@ -79,7 +83,7 @@ deriveSerialize' loc typ0 = do
                                                                                       (map conMatch (zip [0..] cons) ++
                                                                                        [newName "n" >>= \n -> match (varP n) (normalB [|error $ pprint loc ++ ": deriveSerialize - unexpected tag " ++ show $(varE n) ++
                                                                                                                                                  " decoding " ++ show tname ++ " (expected 0.." ++ show (length cons) ++ ")"|]) []]))|])) []]
-          constraints <- toList <$> deriveConstraints 0 ''Serialize tname vals'
+          constraints <- toList <$> deriveConstraints v0 ''Serialize tname vals'
           instanceD
             (pure constraints)
             (appT (conT ''Serialize) (foldl1 appT (conT tname : map pure vals')))
