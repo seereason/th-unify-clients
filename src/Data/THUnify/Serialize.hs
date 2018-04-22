@@ -19,8 +19,8 @@ import Data.THUnify.Prelude (toName)
 deriveSerialize :: TypeQ -> Q [Dec]
 deriveSerialize typq = location >>= \loc -> typq >>= \typ -> deriveSerialize' 0 loc typ
 
-deriveSerializeVerbose :: TypeQ -> Q [Dec]
-deriveSerializeVerbose typq = location >>= \loc -> typq >>= \typ -> deriveSerialize' 2 loc typ
+deriveSerializeVerbose :: Int -> TypeQ -> Q [Dec]
+deriveSerializeVerbose v0 typq = location >>= \loc -> typq >>= \typ -> deriveSerialize' v0 loc typ
 
 deriveSerialize' :: Int -> Loc -> Type -> Q [Dec]
 deriveSerialize' v0 loc typ0 = do
