@@ -48,5 +48,6 @@ library
     Data.THUnify.Orphans
     Data.THUnify.SafeCopy
     Data.THUnify.Serialize
+    Data.THUnify.SerializeViaSafeCopy
     Data.THUnify.TestData
     Data.THUnify.WebRoutesTH
