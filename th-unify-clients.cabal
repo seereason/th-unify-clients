@@ -1,5 +1,5 @@
 name:               th-unify-clients
-version:            1.1
+version:            1.9
 cabal-version:      >= 1.10
 build-type:         Simple
 license:            BSD3
