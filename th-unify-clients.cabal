@@ -47,6 +47,7 @@ library
     Data.THUnify.GHCGenerics
     Data.THUnify.Orphans
     Data.THUnify.SafeCopy
+    Data.THUnify.SafeCopyInstance
     Data.THUnify.Serialize
     Data.THUnify.SerializeViaSafeCopy
     Data.THUnify.TestData
