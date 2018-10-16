@@ -276,12 +276,10 @@ internalSafeCopyInstance' deriveType versionId kindName typ subst tvs' info = do
       ty <- subst <$> runQ (foldl appT tyBase [ pure p | p <- params ])
 #if MIN_VERSION_template_haskell(2,10,0)
       let safeCopyClass args = foldl appT (conT ''SafeCopy) args
-          typeableClass args = foldl appT (conT ''Typeable) args
 #else
       let safeCopyClass args = classP ''SafeCopy args
-          typeableClass args = classP ''Typeable args
 #endif
-      inst <- runQ (instanceD (cxt $ [safeCopyClass [varT var] | var <- Set.toList uvs] ++ [typeableClass [varT var] | var <- Set.toList {-pvs-}tvs] ++ map return context)
+      inst <- runQ (instanceD (cxt $ [safeCopyClass [varT var] | var <- Set.toList uvs] ++ map return context)
                                        (conT ''SafeCopy `appT` (pure ty))
                                        [ mkPutCopy deriveType cons
                                        , mkGetCopy deriveType (pprint1 typ) cons
@@ -337,12 +335,10 @@ internalSafeCopyInstanceIndexedType' deriveType versionId kindName typ tyIndex s
       ty <- subst <$> runQ (foldl appT tyBase [ pure p | p <- params ])
 #if MIN_VERSION_template_haskell(2,10,0)
       let safeCopyClass args = foldl appT (conT ''SafeCopy) args
-          typeableClass args = foldl appT (conT ''Typeable) args
 #else
       let safeCopyClass args = classP ''SafeCopy args
-          typeableClass args = classP ''Typeable args
 #endif
-      inst <- runQ (instanceD (cxt $ [safeCopyClass [varT $ var] | var <- Set.toList uvs] ++ [typeableClass [varT var] | var <- Set.toList {-pvs-}tvs] ++ map return context)
+      inst <- runQ (instanceD (cxt $ [safeCopyClass [varT $ var] | var <- Set.toList uvs] ++ map return context)
                                        (conT ''SafeCopy `appT` (pure ty))
                                        [ mkPutCopy deriveType cons
                                        , mkGetCopy deriveType (pprint1 typ) cons
