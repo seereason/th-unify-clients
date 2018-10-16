@@ -73,6 +73,8 @@ test-suite th-unify-clients-tests
     sr-extra >= 1.52,
     syb,
     template-haskell,
+    th-lift,
+    th-lift-instances,
     th-unify,
     th-unify-clients,
     time,

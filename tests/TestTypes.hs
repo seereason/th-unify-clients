@@ -12,6 +12,9 @@ import Data.SafeCopy
 import Data.THUnify.Monad (applied, M, pprint1, R(R), runV, tyvars)
 import Data.THUnify.Traverse (SubstFn, withBindings, withTypeExpansions)
 import Data.Serialize (get, put, Serialize)
+import Data.Vector (Vector)
+import Data.UserId (UserId)
+import Data.Time (UTCTime)
 import Extra.Orphans
 import Language.Haskell.TH (Exp(..), ExpQ, runQ, TypeQ, TyVarBndr)
 import Language.Haskell.TH.Lift (lift)
@@ -53,7 +56,22 @@ data Hop key
     | ViewHop
     deriving (Show, Eq, Ord, Functor, Data, Typeable)
 
--- A type with phantom type variables
+#if 1
+-- The old Path types
+
+data TypePath t s a = TypePath [Hop SerializedIndex] deriving (Eq, Ord, Data, Typeable)
+
+-- | 'TypePath' with no phantom end type.
+data TypeSPath t s = TypeSPath [Hop SerializedIndex] deriving (Eq, Ord, Data, Typeable)
+
+-- | 'TypePath' with no phantom types.
+data TypeUPath t = TypeUPath [Hop SerializedIndex] deriving (Show, Eq, Ord, Data, Typeable)
+
+-- | 'TypePath' with no phantom types.
+data TypeEPath t a = TypeEPath [Hop SerializedIndex] deriving (Show, Eq, Ord, Data, Typeable)
+#else
+-- The new Path types
+
 data Path t2 s2 a2 =
     Path
     { _start :: s2
@@ -66,6 +84,7 @@ type TypePath t1 s1 a1 = Path t1 (Proxy s1) (Proxy a1)
 type TypeSPath t1 s1 = Path t1 (Proxy s1) ()
 type TypeUPath t = Path t () ()
 type TypeEPath t a = Path t () (Proxy a)
+#endif
 
 -- A type which contains a type with phantom type variables.
 data PathValue t3 s3 =
@@ -75,3 +94,107 @@ data PathValue t3 s3 =
     } deriving (Eq, Ord, Data, Typeable, Show)
 
 deriving instance Show (TypeSPath paths s)
+
+data PathError
+    = CastFailure -- ^ Cast failed in a place we thought it couldn't
+    | DecodeFailure String ByteString -- ^ Failed to decode a value
+    | BadValueInstance -- ^ A Value instance method is wrong
+    | BadPathsInstance -- ^ The Paths instance method is wrong
+    deriving (Show, Data, Eq, Ord)
+
+data EditError k v a t s
+    = OrderKeysMismatch {_eePath :: TypeSPath t s, _expectedKeys :: Vector k, _actualKeys :: Vector k} -- Someone else reordered during a reorder
+    | NotAPermutation {_eePath :: TypeSPath t s, _originalKeys :: Vector k, _permutedKeys :: Vector k} -- Something got deleted or inserted during a reorder
+    | UpdateValueMismatch {_eePath :: TypeSPath t s, _expected :: a, _actual :: a} -- typical simultaneous edit conflict
+    | AlreadyDeleted {_eePath :: TypeSPath t s, _originalKeys :: Vector k, _deleteKey :: k}-- Someone already deleted that (do we care?)
+    | AlreadyInserted {_eePath :: TypeSPath t s, _originalKeys :: Vector k, _insertKey :: k} -- Someone already inserted something there (but maybe its the same thing?)
+    | CantInsertThere {_eePath :: TypeSPath t s, _originalKeys :: Vector k, _insertPos :: Int} -- The insert position no longer exists (maybe just append?)
+    | CantDeleteThere {_eePath :: TypeSPath t s, _originalKeys :: Vector k, _insertPos :: Int} -- The delete position no longer exists (does this matter?)
+    | CantUpdateThere {_eePath :: TypeSPath t s} -- The position you want to update is gone
+    | DeleteValueMismatch {_eePath :: TypeSPath t s, _expectedValue :: v, _actualValue :: v} -- Someone edited the thing you're deleting
+    -- Remaining constructors represent type errors - should be impossible
+    | UpdateTypeMismatch {_eePath :: TypeSPath t s}
+    | NotAnOrder {_eePath :: TypeSPath t s}
+    | OrderKeyTypeMismatch {_eePath :: TypeSPath t s}
+    | OrderValueTypeMismatch {_eePath :: TypeSPath t s}
+    -- | EditErrorList [EditError k v a t s]
+    | PathError PathError -- Need a migration for this?
+    | ValueError {_eeStart :: String, _eeValueString :: String, _eePathHops :: [String]}
+    | ErrorString String
+    | UnexpectedEmptyTraversal
+
+type EditErrorMono t s = EditError SerializedIndex SerializedIxValue SerializedValue t s
+
+data Op k v a t s
+    = Reorder {_opNewKeys :: Vector k, _opPath :: TypeSPath t s}
+    -- ^ Change the order of the list without changing the key/value
+    -- associations
+    | Delete {_opKey :: k, _opPath :: TypeSPath t s}
+    -- ^ Delete the element associated with a key
+    | Update {_opPath :: TypeSPath t s, _opValue :: a}
+    -- ^ Replace old with new
+    | Append {_opPath :: TypeSPath t s, _opIxValue :: v}
+    -- ^ Insert a value at the next unoccupied position
+    | Insert {_opPos :: Int, _opPath :: TypeSPath t s, _opIxValue :: v}
+    -- ^ Insert a value at position n, a new key is allocated
+    -- using an Enum instance.
+    | InsertWithKey {_opKey :: k, _opPos :: Int, _opPath :: TypeSPath t s, _opIxValue :: v}
+    -- ^ Insert a (key, value) pair at position n
+    deriving Typeable
+data Edit k v a t s
+    = Updated {_oldV :: a, _newV :: a, _ePath :: TypeSPath t s}
+    -- ^ Replace old with new
+    | Reordered {_oldO :: Vector k, _newO :: Vector k, _ePath :: TypeSPath t s}
+    -- ^ Update the order of the keys.
+    | Inserted {_oldO :: Vector k, _newO :: Vector k, _eKey :: k, _insV :: v, _ePos :: Int, _ePath :: TypeSPath t s}
+    -- ^ Insert an element at position n
+    | Deleted {_oldO :: Vector k, _newO :: Vector k, _eKey :: k, _delV :: v, _ePos :: Int, _ePath :: TypeSPath t s}
+    -- ^ Delete the element at position n
+
+newtype EventId = EventId {unEventId :: Int}
+    deriving (Eq, Ord, Read, Show, Data)
+
+data Event k v a t s
+    = Event
+      { _user :: UserId
+      -- ^ The event's creator
+      , _when :: UTCTime
+      -- ^ Time stamp assigned by the client as soon as possible after
+      -- the user input that created the event.
+      , _eventId :: EventId
+      -- ^ A sequence number assigned by the server when the event
+      -- becomes part of a History.
+      , _edit :: Edit k v a t s
+      }
+
+instance Functor (Event k v a t) where
+    fmap f (Event u t a e) = Event u t a (fmap f e)
+
+instance Functor (Edit k v a t) where
+    fmap _ (Updated old new (TypeSPath hs)) = Updated old new (TypeSPath hs)
+    fmap _ (Reordered old new (TypeSPath hs)) = Reordered old new (TypeSPath hs)
+    fmap _ (Inserted old new k v i (TypeSPath hs)) = Inserted old new k v i (TypeSPath hs)
+    fmap _ (Deleted old new k v i (TypeSPath hs)) = Deleted old new k v i (TypeSPath hs)
+
+newtype SerializedIxValue = SerializedIxValue {unSerializedIxValue :: ByteString} deriving (Data, Eq, Ord, Show)
+newtype SerializedValue = SerializedValue {unSerializedValue :: ByteString} deriving (Data, Eq, Ord, Show)
+
+type EventMono = Event SerializedIndex SerializedIxValue SerializedValue
+
+data EventTree t s
+    = Current
+      { _events :: [EventMono t s]
+      -- ^ Most recent event first
+      , _value :: s
+      -- ^ Result of applying all the events to some initial value.
+      }
+    | Previous
+      { _events :: [EventMono t s]
+      -- ^ EventTree that occurred before some conflict caused the
+      -- split that creating the branches.
+      , _branches :: [EventTree t s]
+      } deriving (Functor)
+
+data HistoryTree_1 t s
+    = HistoryTree {_eventTree :: EventTree t s, _nextAccession :: EventId}
+    deriving (Functor)

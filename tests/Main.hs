@@ -7,7 +7,6 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
-{-# OPTIONS -ddump-splices #-}
 
 import Data.Map
 import Data.Generics hiding (Generic)
@@ -98,6 +97,8 @@ tests = TestList
 -- might have made them stop working.
 
 $(safeCopyInstance 1 'base [t|SerializedIndex|])
+$(safeCopyInstance 1 'base [t|SerializedIxValue|])
+$(safeCopyInstance 1 'base [t|SerializedValue|])
 $(safeCopyInstance 1 'base [t|Hop|])
 -- $(safeCopyInstance 1 'base [t|Hop SerializedIndex|])
 $(safeCopyInstance 5 'base [t|TypePath|])
@@ -106,5 +107,13 @@ $(safeCopyInstance 5 'base [t|TypeEPath|])
 $(safeCopyInstance 5 'base [t|TypeUPath|])
 $(safeCopyInstance 1 'base [t|PathValue|])
 
+$(safeCopyInstance 1 'base [t|PathError|])
+$(safeCopyInstance 3 'base [t|Op|])
+$(safeCopyInstance 2 'base [t|Edit|])
+$(safeCopyInstance 2 'base [t|EditError|])
+$(safeCopyInstance 2 'base [t|EventId|])
+$(safeCopyInstance 4 'base [t|Event|])
+$(safeCopyInstance 3 'base [t|EventTree|])
+$(safeCopyInstance 1 'base [t|HistoryTree_1|])
 -- $(safeCopyInstance 0 'base [t|Order_0|])
 -- $(safeCopyInstance 1 'extension [t|VMap|])
