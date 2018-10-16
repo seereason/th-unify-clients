@@ -3,6 +3,7 @@
 {-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -91,65 +92,19 @@ tests = TestList
                   $(safeCopyInstance 1 'base [t|Map|] >>= lift . pprint1))
     ]
 
-#if 1
-$(safeCopyInstance 0 'base [t|Order_0|])
-$(safeCopyInstance 1 'extension [t|VMap|])
-#else
-instance (SafeCopy (Map k v), SafeCopy [k], SafeCopy k) =>
-             SafeCopy (Order_0 k v) where
-      putCopy (Order_0 a1_a2UKN a2_a2UKO a3_a2UKP)
-        = contain
-            (do { safePut_Mapkv_a2UKQ <- getSafePut;
-                  safePut_Listk_a2UKR <- getSafePut;
-                  safePut_k_a2UKS <- getSafePut;
-                  safePut_Mapkv_a2UKQ a1_a2UKN;
-                  safePut_Listk_a2UKR a2_a2UKO;
-                  safePut_k_a2UKS a3_a2UKP;
-                  return () })
-      getCopy
-        = contain
-            (Data.Serialize.Get.label
-               "Order_0:"
-               (do { safeGet_Mapkv_a2UKT <- getSafeGet;
-                     safeGet_Listk_a2UKU <- getSafeGet;
-                     safeGet_k_a2UKV <- getSafeGet;
-                     ((((return Order_0) <*> safeGet_Mapkv_a2UKT)
-                       <*> safeGet_Listk_a2UKU)
-                      <*> safeGet_k_a2UKV) }))
-      version = 0
-      kind = base
-      errorTypeName _ = "Order_0"
-
-instance (Migrate (VMap k v), SafeCopy (Map k v), SafeCopy (L k)) => SafeCopy (VMap k v) where
-      putCopy (VMap a1 a2)
-        = contain
-            (do { safePut_Mapkv_a2UNl <- getSafePut;
-                  safePut_Seqak_a2UNm <- getSafePut;
-                  safePut_Mapkv_a2UNl a1;
-                  safePut_Seqak_a2UNm a2;
-                  return () })
-      getCopy
-        = contain
-            (Data.Serialize.Get.label
-               "VMap:"
-               (do { safeGet_Mapkv_a2UNn <- getSafeGet;
-                     safeGet_Seqak_a2UNo <- getSafeGet;
-                     (((return VMap) <*> safeGet_Mapkv_a2UNn)
-                      <*> safeGet_Seqak_a2UNo) }))
-      version = 1
-      kind = extension
-      errorTypeName _ = "VMap"
-#endif
-
 -- These just need to compile.  There are cases above to check
 -- the actual template haskell output, but unless you actually
 -- compile them you don't know if something in the environment
 -- might have made them stop working.
 
 $(safeCopyInstance 1 'base [t|SerializedIndex|])
-$(safeCopyInstance 1 'base [t|Hop SerializedIndex|])
+$(safeCopyInstance 1 'base [t|Hop|])
+-- $(safeCopyInstance 1 'base [t|Hop SerializedIndex|])
 $(safeCopyInstance 5 'base [t|TypePath|])
 $(safeCopyInstance 5 'base [t|TypeSPath|])
 $(safeCopyInstance 5 'base [t|TypeEPath|])
 $(safeCopyInstance 5 'base [t|TypeUPath|])
 $(safeCopyInstance 1 'base [t|PathValue|])
+
+-- $(safeCopyInstance 0 'base [t|Order_0|])
+-- $(safeCopyInstance 1 'extension [t|VMap|])

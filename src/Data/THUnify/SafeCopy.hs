@@ -235,20 +235,20 @@ internalSafeCopyInstance' deriveType versionId kindName typ subst tvs' info = do
   Phantom pvs uvs <- runQ (phantom (pure typ))
   case info of
 #if MIN_VERSION_template_haskell(2,11,0)
-    Right (TyConI (DataD context _name tyvars _kind cons _derivs))
+    Right (TyConI (DataD context tname tyvars _kind cons _derivs))
 #else
-    Right (TyConI (DataD context _name tyvars cons _derivs))
+    Right (TyConI (DataD context tname tyvars cons _derivs))
 #endif
       | length cons > 255 -> fail $ "Can't derive SafeCopy instance for: " ++ pprint1 typ ++
                                     ". The datatype must have less than 256 constructors."
-      | otherwise         -> worker' (pure typ) (pvs, uvs) context tyvars (zip [0..] cons)
+      | otherwise         -> worker' (conT tname) (pvs, uvs) context tyvars (zip [0..] cons)
 
 #if MIN_VERSION_template_haskell(2,11,0)
-    Right (TyConI (NewtypeD context _name tyvars _kind con _derivs)) ->
+    Right (TyConI (NewtypeD context tname tyvars _kind con _derivs)) ->
 #else
-    Right (TyConI (NewtypeD context _name tyvars con _derivs)) ->
+    Right (TyConI (NewtypeD context tname tyvars con _derivs)) ->
 #endif
-      worker' (pure typ) (pvs, uvs) context tyvars [(0, con)]
+      worker' (conT tname) (pvs, uvs) context tyvars [(0, con)]
 
     Right (FamilyI _ insts) -> do
       forM_ insts $ \inst ->
