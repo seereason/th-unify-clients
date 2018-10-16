@@ -1,4 +1,4 @@
-:set -isrc:tests
+:set -isrc:tests:../th-unify/src
 :set -XRankNTypes
 :set -XScopedTypeVariables
 :set -XTemplateHaskell
