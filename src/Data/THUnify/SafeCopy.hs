@@ -30,6 +30,9 @@ import Data.Word (Word8) -- Haddock
 
 data DeriveType = Normal | Simple | HappstackData
 
+derivClauseCxt :: DerivClause -> Cxt
+derivClauseCxt (DerivClause _ x) = x
+
 -- | Derive an instance of 'SafeCopy'.
 --
 --   When serializing, we put a 'Word8' describing the
@@ -235,42 +238,42 @@ internalSafeCopyInstance' deriveType versionId kindName typ subst tvs' info = do
   Phantom pvs uvs <- runQ (phantom (pure typ))
   case info of
 #if MIN_VERSION_template_haskell(2,11,0)
-    Right (TyConI (DataD context tname tyvars _kind cons _derivs))
+    Right (TyConI (DataD context tname tyvars _kind cons derivs))
 #else
-    Right (TyConI (DataD context tname tyvars cons _derivs))
+    Right (TyConI (DataD context tname tyvars cons derivs))
 #endif
       | length cons > 255 -> fail $ "Can't derive SafeCopy instance for: " ++ pprint1 typ ++
                                     ". The datatype must have less than 256 constructors."
-      | otherwise         -> worker' (conT tname) (pvs, uvs) context tyvars (zip [0..] cons)
+      | otherwise         -> worker' (conT tname) (pvs, uvs) context derivs tyvars (zip [0..] cons)
 
 #if MIN_VERSION_template_haskell(2,11,0)
-    Right (TyConI (NewtypeD context tname tyvars _kind con _derivs)) ->
+    Right (TyConI (NewtypeD context tname tyvars _kind con derivs)) ->
 #else
-    Right (TyConI (NewtypeD context tname tyvars con _derivs)) ->
+    Right (TyConI (NewtypeD context tname tyvars con derivs)) ->
 #endif
-      worker' (conT tname) (pvs, uvs) context tyvars [(0, con)]
+      worker' (conT tname) (pvs, uvs) context derivs tyvars [(0, con)]
 
     Right (FamilyI _ insts) -> do
       forM_ insts $ \inst ->
         case inst of
 #if MIN_VERSION_template_haskell(2,11,0)
-          DataInstD context _name ty _kind cons _derivs ->
+          DataInstD context _name ty _kind cons derivs ->
 #else
-          DataInstD context _name ty cons _derivs ->
+          DataInstD context _name ty cons derivs ->
 #endif
-              worker' (foldl appT (pure typ) (map return ty)) (pvs, uvs) context [] (zip [0..] cons)
+              worker' (foldl appT (pure typ) (map return ty)) (pvs, uvs) context derivs [] (zip [0..] cons)
 
 #if MIN_VERSION_template_haskell(2,11,0)
-          NewtypeInstD context _name ty _kind con _derivs ->
+          NewtypeInstD context _name ty _kind con derivs ->
 #else
-          NewtypeInstD context _name ty con _derivs ->
+          NewtypeInstD context _name ty con derivs ->
 #endif
-              worker' (foldl appT (pure typ) (map return ty)) (pvs, uvs) context [] [(0, con)]
+              worker' (foldl appT (pure typ) (map return ty)) (pvs, uvs) context derivs [] [(0, con)]
           _ -> fail $ "Can't derive SafeCopy instance for: " ++ show (typ, inst)
     _ -> fail $ "Can't derive SafeCopy instance for: " ++ show (typ, info)
   where
-    worker' :: TypeQ -> (Set Name, Set Name) -> Cxt -> [TyVarBndr] -> [(Integer, Con)] -> M [Dec] ()
-    worker' tyBase (pvs, uvs) context tyvars cons = do
+    worker' :: TypeQ -> (Set Name, Set Name) -> Cxt -> [DerivClause] -> [TyVarBndr] -> [(Integer, Con)] -> M [Dec] ()
+    worker' tyBase (pvs, uvs) context derivs tyvars cons = do
       let params = fmap (\v -> subst (VarT (tyVarName v))) tvs'
           tvs = findTypeVars params :: Set Name
       ty <- subst <$> runQ (foldl appT tyBase [ pure p | p <- params ])
