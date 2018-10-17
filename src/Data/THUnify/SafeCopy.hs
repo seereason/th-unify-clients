@@ -237,7 +237,7 @@ internalSafeCopyInstance deriveType versionId kindName typeq = execM $ do
                       let typ'' = foldl AppT typ' (fmap (VarT . toName) tvs) in
                       withTypeExpansions (internalSafeCopyInstance' deriveType versionId kindName typ'') typ'')
 
-internalSafeCopyInstance' :: DeriveType -> Version a -> Name -> Type -> InfoFn [Dec]
+internalSafeCopyInstance' :: DeriveType -> Version a -> Name -> Type -> InfoFn (M [Dec])
 internalSafeCopyInstance' deriveType versionId kindName typ subst tvs' info = do
   -- cx <- use constraints
   Phantom pvs uvs <- runQ (phantom (pure typ))
@@ -306,7 +306,7 @@ internalSafeCopyInstanceIndexedType deriveType versionId kindName typeq tyIndex'
   tyIndex <- sequence tyIndex'
   typeq >>= execM . withTypeExpansions (internalSafeCopyInstanceIndexedType' deriveType versionId kindName typ tyIndex)
 
-internalSafeCopyInstanceIndexedType' :: DeriveType -> Version a -> Name -> Type -> [Type] -> InfoFn [Dec]
+internalSafeCopyInstanceIndexedType' :: DeriveType -> Version a -> Name -> Type -> [Type] -> InfoFn (M [Dec])
 internalSafeCopyInstanceIndexedType' deriveType versionId kindName typ tyIndex subst tvs' info = do
   Phantom pvs uvs <- runQ (phantom (pure typ))
   case info of
