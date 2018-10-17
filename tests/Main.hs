@@ -55,30 +55,60 @@ tests = TestList
                   $(safeCopyInstance 1 'base [t|Hop|] >>= lift . pprint1))
     , TestCase (assertEqual "SafeCopy TypePath"
                   (mconcat
+#if 1
+                   ["instance SafeCopy (TypePath t s a) where",
+                    " putCopy (TypePath a1) = contain (do {safePut_ListHopSerializedIndex <- getSafePut; safePut_ListHopSerializedIndex a1; return ()})",
+                    " getCopy = contain (label \"TypePath t s a:\" (do {safeGet_ListHopSerializedIndex <- getSafeGet; return TypePath <*> safeGet_ListHopSerializedIndex}))",
+                    " version = 1",
+                    " kind = base",
+                    " errorTypeName _ = \"TypePath t s a\""]
+#else
                    ["instance SafeCopy (Path t1 (Proxy s1) (Proxy a1)) where",
                     " putCopy (Path a1 a2 a3) = contain (do {safePut_Proxys1 <- getSafePut; safePut_ListHopSerializedIndex <- getSafePut; safePut_Proxya1 <- getSafePut; safePut_Proxys1 a1; safePut_ListHopSerializedIndex a2; safePut_Proxya1 a3; return ()})",
                     " getCopy = contain (label \"TypePath t1 s1 a1:\" (do {safeGet_Proxys1 <- getSafeGet; safeGet_ListHopSerializedIndex <- getSafeGet; safeGet_Proxya1 <- getSafeGet; ((return Path <*> safeGet_Proxys1) <*> safeGet_ListHopSerializedIndex) <*> safeGet_Proxya1}))",
                     " version = 1",
                     " kind = base",
-                    " errorTypeName _ = \"TypePath t1 s1 a1\""])
+                    " errorTypeName _ = \"TypePath t1 s1 a1\""]
+#endif
+                  )
                   $(safeCopyInstance 1 'base [t|TypePath|] >>= lift . pprint1))
     , TestCase (assertEqual "SafeCopy TypeSPath"
                   (mconcat
+#if 1
+                   ["instance SafeCopy (TypeSPath t s) where",
+                    " putCopy (TypeSPath a1) = contain (do {safePut_ListHopSerializedIndex <- getSafePut; safePut_ListHopSerializedIndex a1; return ()})",
+                    " getCopy = contain (label \"TypeSPath t s:\" (do {safeGet_ListHopSerializedIndex <- getSafeGet; return TypeSPath <*> safeGet_ListHopSerializedIndex}))",
+                    " version = 1",
+                    " kind = base",
+                    " errorTypeName _ = \"TypeSPath t s\""]
+#else
                    ["instance SafeCopy (Path t1 (Proxy s1) ()) where",
                     " putCopy (Path a1 a2 a3) = contain (do {safePut_Proxys1 <- getSafePut; safePut_ListHopSerializedIndex <- getSafePut; safePut_Tuple0 <- getSafePut; safePut_Proxys1 a1; safePut_ListHopSerializedIndex a2; safePut_Tuple0 a3; return ()})",
                     " getCopy = contain (label \"TypeSPath t1 s1:\" (do {safeGet_Proxys1 <- getSafeGet; safeGet_ListHopSerializedIndex <- getSafeGet; safeGet_Tuple0 <- getSafeGet; ((return Path <*> safeGet_Proxys1) <*> safeGet_ListHopSerializedIndex) <*> safeGet_Tuple0}))",
                     " version = 1",
                     " kind = base",
-                    " errorTypeName _ = \"TypeSPath t1 s1\""])
+                    " errorTypeName _ = \"TypeSPath t1 s1\""]
+#endif
+                  )
                   $(safeCopyInstance 1 'base [t|TypeSPath|] >>= lift . pprint1))
     , TestCase (assertEqual "SafeCopy PathValue"
                  (mconcat
+#if 1
+                   ["instance SafeCopy (PathValue t3 s3) where",
+                    " putCopy (PathValue a1 a2) = contain (do {safePut_TypeSPatht3s3 <- getSafePut; safePut_ByteString <- getSafePut; safePut_TypeSPatht3s3 a1; safePut_ByteString a2; return ()})",
+                    " getCopy = contain (label \"PathValue t3 s3:\" (do {safeGet_TypeSPatht3s3 <- getSafeGet; safeGet_ByteString <- getSafeGet; (return PathValue <*> safeGet_TypeSPatht3s3) <*> safeGet_ByteString}))",
+                    " version = 1",
+                    " kind = base",
+                    " errorTypeName _ = \"PathValue t3 s3\""]
+#else
                    ["instance SafeCopy (PathValue t3 s3) where",
                     " putCopy (PathValue a1 a2) = contain (do {safePut_Patht1Proxys1Tuple0t3s3 <- getSafePut; safePut_ByteString <- getSafePut; safePut_Patht1Proxys1Tuple0t3s3 a1; safePut_ByteString a2; return ()})",
                     " getCopy = contain (label \"PathValue t3 s3:\" (do {safeGet_Patht1Proxys1Tuple0t3s3 <- getSafeGet; safeGet_ByteString <- getSafeGet; (return PathValue <*> safeGet_Patht1Proxys1Tuple0t3s3) <*> safeGet_ByteString}))",
                     " version = 1",
                     " kind = base",
-                    " errorTypeName _ = \"PathValue t3 s3\""])
+                    " errorTypeName _ = \"PathValue t3 s3\""]
+#endif
+                  )
                   $(safeCopyInstance 1 'base [t|PathValue|] >>= lift . pprint1))
     , TestCase (assertEqual "SafeCopy Either"
                   (mconcat
@@ -116,11 +146,15 @@ $(safeCopyInstance 2 'base [t|EventId|])
 $(safeCopyInstance 4 'base [t|Event|])
 $(safeCopyInstance 3 'base [t|EventTree|])
 $(safeCopyInstance 1 'base [t|HistoryTree_1|])
-$(safeCopyInstance 0 'base [t|Order_0|])
+-- Because Order_0 has a deriving Data instance, and that Data
+-- instance has an Ord k constraint, this SafeCopy instance also needs
+-- an Ord constraint on k.  So we need to collect the constraints on
+-- the SafeCopy instances of all the subtypes.
+-- $(safeCopyInstance 0 'base [t|Order_0|])
 -- $(safeCopyInstance 1 'extension [t|VMap|])
 
--- $(safeCopyInstance 1 'base [t|History|])
--- $(safeCopyInstance 1 'base [t|ReportID|])
+$(safeCopyInstance 1 'base [t|History|])
+$(safeCopyInstance 1 'base [t|ReportID|])
 -- $(safeCopyInstance 1 'base [t|Report|])
 -- $(safeCopyInstance 1 'base [t|ReportMap|])
 -- $(safeCopyInstance 1 'base [t|AppraisalData|])
