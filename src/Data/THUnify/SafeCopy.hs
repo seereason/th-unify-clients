@@ -8,11 +8,10 @@
 module Data.THUnify.SafeCopy where
 
 import Control.Monad.RWS (tell)
-import Data.Typeable (Typeable)
 import Data.Serialize (getWord8, putWord8, label)
 import Data.SafeCopy.Internal (Version(unVersion), SafeCopy(version), kind, errorTypeName, putCopy, safePut, getSafePut, contain, getCopy, getSafeGet, safeGet)
 import Data.Set as Set (Set, toList)
-import Data.THUnify.Monad ({-constraints,-} findTypeVars, M, pprint1, runM, runV, toName)
+import Data.THUnify.Monad ({-constraints,-} findTypeVars, M, message, pprint1, execM, execV, toName)
 import Data.THUnify.Traverse (InfoFn, Phantom(..), phantom, withFree, withTypeExpansions)
 #if MIN_VERSION_template_haskell(2,8,0)
 import Language.Haskell.TH hiding (Kind)
@@ -227,7 +226,7 @@ safeCopyInstanceHappstackData :: Version a -> Name -> TypeQ -> Q [Dec]
 safeCopyInstanceHappstackData = internalSafeCopyInstance HappstackData
 
 internalSafeCopyInstance :: DeriveType -> Version a -> Name -> TypeQ -> Q [Dec]
-internalSafeCopyInstance deriveType versionId kindName typeq = runM $ do
+internalSafeCopyInstance deriveType versionId kindName typeq = execM $ do
   withFree typeq (\typ' tvs ->
                       let typ'' = foldl AppT typ' (fmap (VarT . toName) tvs) in
                       withTypeExpansions (internalSafeCopyInstance' deriveType versionId kindName typ'') typ'')
@@ -299,7 +298,7 @@ internalSafeCopyInstanceIndexedType :: DeriveType -> Version a -> Name -> TypeQ 
 internalSafeCopyInstanceIndexedType deriveType versionId kindName typeq tyIndex' = do
   typ <- typeq
   tyIndex <- sequence tyIndex'
-  typeq >>= runM . withTypeExpansions (internalSafeCopyInstanceIndexedType' deriveType versionId kindName typ tyIndex)
+  typeq >>= execM . withTypeExpansions (internalSafeCopyInstanceIndexedType' deriveType versionId kindName typ tyIndex)
 
 internalSafeCopyInstanceIndexedType' :: DeriveType -> Version a -> Name -> Type -> [Type] -> InfoFn [Dec]
 internalSafeCopyInstanceIndexedType' deriveType versionId kindName typ tyIndex subst tvs' info = do
