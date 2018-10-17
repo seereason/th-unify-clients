@@ -1,3 +1,9 @@
+-- | Improved version of Data.SafeCopy.derivesSafeCopy:
+--     (1) Argument is a type rather than a type name
+--     (2) omits the SafeCopy constraint on phantom type variables
+--     (3) collects and adds the constraints on the SafeCopy instances
+--         of the subtypes.
+
 {-# LANGUAGE TemplateHaskell, CPP #-}
 
 -- Hack for bug in older Cabal versions
