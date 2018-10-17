@@ -13,7 +13,7 @@ import Data.SafeCopy
 import Data.Sequence (Seq)
 import Data.Set (Set)
 import Data.Text (Text)
-import Data.THUnify.Monad (applied, M, pprint1, R(R), runV, tyvars)
+import Data.THUnify.Traverse (applied, M, pprint1, runV, tyvars)
 import Data.THUnify.Traverse (SubstFn, withBindings, withTypeExpansions)
 import Data.Serialize (get, put, Serialize)
 import Data.Vector (Vector)

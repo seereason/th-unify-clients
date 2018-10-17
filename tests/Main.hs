@@ -10,25 +10,25 @@
 {-# OPTIONS -Wno-orphans #-}
 
 import Data.Map
-import Data.Generics hiding (Generic)
-import Data.ListLike (fromListLike)
+--import Data.Generics hiding (Generic)
+--import Data.ListLike (fromListLike)
 import Data.SafeCopy
-import Data.Sequence
-import Data.Serialize
-import Data.Serialize.Get
-import Data.THUnify.Monad (pprint1)
+--import Data.Sequence
+--import Data.Serialize
+--import Data.Serialize.Get
+import Data.THUnify.Traverse (pprint1)
 import Data.THUnify.SafeCopy (safeCopyInstance)
-import GHC.Generics
+--import GHC.Generics
 import Language.Haskell.TH.Lift (lift)
 import Test.HUnit
 import TestTypes
 
 main :: IO ()
 main = do
-  counts <- runTestTT tests
-  case counts of
+  cts <- runTestTT tests
+  case cts of
     Counts {errors = 0, failures = 0} -> pure ()
-    _ -> error (showCounts counts)
+    _ -> error (showCounts cts)
 
 tests :: Test
 tests = TestList
