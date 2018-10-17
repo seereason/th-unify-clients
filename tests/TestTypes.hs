@@ -27,7 +27,7 @@ import Language.Haskell.TH.Lift (lift)
 import Network.URI (URI(..), URIAuth(..))
 import Text.LaTeX (LaTeX)
 import Text.LaTeX.Base.Syntax as LaTeX (LaTeX(..), Measure(..), TeXArg(..), MathType(..))
-import qualified Text.Pandoc as P
+import qualified Text.Pandoc.Definition as P
 
 deriving instance Read URI
 deriving instance Read URIAuth
