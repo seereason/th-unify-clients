@@ -17,7 +17,8 @@ import Control.Monad.Trans (lift)
 import Data.Generics (Data, everywhere, mkT, listify, Typeable)
 import Data.Map as Map (fromList, lookup, Map)
 import Data.Set as Set (delete, empty, fromList, insert, member, Set, singleton)
-import Data.THUnify.Prelude (pprint1, toName)
+import Data.THUnify.Prelude (toName)
+import Extra.Pretty (pprint1)
 import Language.Haskell.TH
 import Language.Haskell.TH.Syntax (Quasi)
 

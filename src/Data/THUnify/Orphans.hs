@@ -15,7 +15,7 @@ import Data.ByteString (ByteString)
 import Data.ListLike as LL
 import Data.Proxy (Proxy(Proxy))
 import Data.Text (pack, unpack)
-import Data.THUnify.Prelude.Orphans ()
+import Extra.Orphans ()
 import Language.Haskell.TH
 import Language.Haskell.TH.PprLib (ptext)
 import Prelude hiding (concat, foldl1)

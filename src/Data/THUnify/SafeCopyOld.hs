@@ -8,10 +8,11 @@
 module Data.THUnify.SafeCopyOld where
 
 import Data.THUnify.Phantom (nonPhantom)
-import Data.THUnify.Prelude (pprint1, toName)
+import Data.THUnify.Prelude (toName)
 import Data.SafeCopy
 import Data.Serialize (getWord8, putWord8, label)
 import Data.Set as Set (toList)
+import Extra.Pretty (pprint1)
 
 #if MIN_VERSION_template_haskell(2,8,0)
 import Language.Haskell.TH hiding (Kind)
