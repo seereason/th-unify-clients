@@ -125,10 +125,16 @@ derivClauseCxt (DerivClause _ x) = x
 --   version of your data type and 'safeCopyInstance' in another
 --   version without any problems.
 safeCopyInstance :: Version a -> Name -> TypeQ -> Q [Dec]
-safeCopyInstance = internalSafeCopyInstance Normal
+safeCopyInstance = internalSafeCopyInstance Normal (const [])
 
 safeCopyInstanceIndexedType :: Version a -> Name -> TypeQ -> [TypeQ] -> Q [Dec]
-safeCopyInstanceIndexedType = internalSafeCopyInstanceIndexedType Normal
+safeCopyInstanceIndexedType = internalSafeCopyInstanceIndexedType Normal (const [])
+
+safeCopyInstanceWithMoreCxt :: (Type -> [Q Pred]) -> Version a -> Name -> TypeQ -> Q [Dec]
+safeCopyInstanceWithMoreCxt = internalSafeCopyInstance Normal
+
+safeCopyInstanceIndexedTypeWithMoreCxt :: (Type -> [Q Pred]) -> Version a -> Name -> TypeQ -> [TypeQ] -> Q [Dec]
+safeCopyInstanceIndexedTypeWithMoreCxt = internalSafeCopyInstanceIndexedType Normal
 
 -- | Derive an instance of 'SafeCopy'.  The instance derived by
 --   this function is simpler than the one derived by
@@ -179,10 +185,10 @@ safeCopyInstanceIndexedType = internalSafeCopyInstanceIndexedType Normal
 --   Note that you may use 'safeCopyInstance' with one version of
 --   your data type and 'safeCopyInstanceSimple' in another version
 --   without any problems.
-safeCopyInstanceSimple :: Version a -> Name -> TypeQ -> Q [Dec]
+safeCopyInstanceSimple :: (Type -> [Q Pred]) -> Version a -> Name -> TypeQ -> Q [Dec]
 safeCopyInstanceSimple = internalSafeCopyInstance Simple
 
-safeCopyInstanceSimpleIndexedType :: Version a -> Name -> TypeQ -> [TypeQ] -> Q [Dec]
+safeCopyInstanceSimpleIndexedType :: (Type -> [Q Pred]) -> Version a -> Name -> TypeQ -> [TypeQ] -> Q [Dec]
 safeCopyInstanceSimpleIndexedType = internalSafeCopyInstanceIndexedType Simple
 
 -- | Derive an instance of 'SafeCopy'.  The instance derived by
@@ -229,17 +235,17 @@ safeCopyInstanceSimpleIndexedType = internalSafeCopyInstanceIndexedType Simple
 --   Note that you may use 'safeCopyInstance' with one version of
 --   your data type and 'safeCopyInstanceHappstackData' in another version
 --   without any problems.
-safeCopyInstanceHappstackData :: Version a -> Name -> TypeQ -> Q [Dec]
+safeCopyInstanceHappstackData :: (Type -> [Q Pred]) -> Version a -> Name -> TypeQ -> Q [Dec]
 safeCopyInstanceHappstackData = internalSafeCopyInstance HappstackData
 
-internalSafeCopyInstance :: DeriveType -> Version a -> Name -> TypeQ -> Q [Dec]
-internalSafeCopyInstance deriveType versionId kindName typeq = execM $ do
+internalSafeCopyInstance :: DeriveType -> (Type -> [Q Pred]) -> Version a -> Name -> TypeQ -> Q [Dec]
+internalSafeCopyInstance deriveType moreCxt versionId kindName typeq = execM $ do
   withFree typeq (\typ' tvs ->
                       let typ'' = foldl AppT typ' (fmap (VarT . toName) tvs) in
-                      withTypeExpansions (internalSafeCopyInstance' deriveType versionId kindName typ'') typ'')
+                      withTypeExpansions (internalSafeCopyInstance' deriveType moreCxt versionId kindName typ'') typ'')
 
-internalSafeCopyInstance' :: DeriveType -> Version a -> Name -> Type -> InfoFn (M [Dec])
-internalSafeCopyInstance' deriveType versionId kindName typ subst tvs' info = do
+internalSafeCopyInstance' :: DeriveType -> (Type -> [Q Pred]) -> Version a -> Name -> Type -> InfoFn (M [Dec])
+internalSafeCopyInstance' deriveType moreCxt versionId kindName typ subst tvs' info = do
   -- cx <- use constraints
   Phantom pvs uvs <- runQ (phantom (pure typ))
   case info of
@@ -288,7 +294,7 @@ internalSafeCopyInstance' deriveType versionId kindName typ subst tvs' info = do
 #else
       let safeCopyClass args = classP ''SafeCopy args
 #endif
-      inst <- runQ (instanceD (cxt $ [safeCopyClass [varT var] | var <- Set.toList uvs] ++ map return context)
+      inst <- runQ (instanceD (cxt $ [safeCopyClass [varT var] | var <- Set.toList uvs] ++ map return context ++ moreCxt typ)
                                        (conT ''SafeCopy `appT` (pure ty))
                                        [ mkPutCopy deriveType cons
                                        , mkGetCopy deriveType (pprint1 typ) cons
@@ -298,17 +304,17 @@ internalSafeCopyInstance' deriveType versionId kindName typ subst tvs' info = do
                                        ])
       tell [inst]
 
-safeCopyInstanceHappstackDataIndexedType :: Version a -> Name -> TypeQ -> [TypeQ] -> Q [Dec]
+safeCopyInstanceHappstackDataIndexedType :: (Type -> [Q Pred]) -> Version a -> Name -> TypeQ -> [TypeQ] -> Q [Dec]
 safeCopyInstanceHappstackDataIndexedType = internalSafeCopyInstanceIndexedType HappstackData
 
-internalSafeCopyInstanceIndexedType :: DeriveType -> Version a -> Name -> TypeQ -> [TypeQ] -> Q [Dec]
-internalSafeCopyInstanceIndexedType deriveType versionId kindName typeq tyIndex' = do
+internalSafeCopyInstanceIndexedType :: DeriveType -> (Type -> [Q Pred]) -> Version a -> Name -> TypeQ -> [TypeQ] -> Q [Dec]
+internalSafeCopyInstanceIndexedType deriveType moreCxt versionId kindName typeq tyIndex' = do
   typ <- typeq
   tyIndex <- sequence tyIndex'
-  typeq >>= execM . withTypeExpansions (internalSafeCopyInstanceIndexedType' deriveType versionId kindName typ tyIndex)
+  typeq >>= execM . withTypeExpansions (internalSafeCopyInstanceIndexedType' deriveType moreCxt versionId kindName typ tyIndex)
 
-internalSafeCopyInstanceIndexedType' :: DeriveType -> Version a -> Name -> Type -> [Type] -> InfoFn (M [Dec])
-internalSafeCopyInstanceIndexedType' deriveType versionId kindName typ tyIndex subst tvs' info = do
+internalSafeCopyInstanceIndexedType' :: DeriveType -> (Type -> [Q Pred]) ->  Version a -> Name -> Type -> [Type] -> InfoFn (M [Dec])
+internalSafeCopyInstanceIndexedType' deriveType moreCxt versionId kindName typ tyIndex subst tvs' info = do
   Phantom pvs uvs <- runQ (phantom (pure typ))
   case info of
     Right (FamilyI _ insts) -> do
@@ -347,7 +353,7 @@ internalSafeCopyInstanceIndexedType' deriveType versionId kindName typ tyIndex s
 #else
       let safeCopyClass args = classP ''SafeCopy args
 #endif
-      inst <- runQ (instanceD (cxt $ [safeCopyClass [varT $ var] | var <- Set.toList uvs] ++ map return context)
+      inst <- runQ (instanceD (cxt $ [safeCopyClass [varT $ var] | var <- Set.toList uvs] ++ map return context ++ moreCxt typ)
                                        (conT ''SafeCopy `appT` (pure ty))
                                        [ mkPutCopy deriveType cons
                                        , mkGetCopy deriveType (pprint1 typ) cons
