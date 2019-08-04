@@ -18,7 +18,6 @@ import Data.SafeCopy
 --import Data.Serialize.Get
 import Data.THUnify.Traverse (pprint1)
 import Data.THUnify.SafeCopy (safeCopyInstance)
---import GHC.Generics
 import Language.Haskell.TH.Lift (lift)
 import Test.HUnit
 import TestTypes
@@ -139,13 +138,13 @@ $(safeCopyInstance 5 'base [t|TypeUPath|])
 $(safeCopyInstance 1 'base [t|PathValue|])
 
 $(safeCopyInstance 1 'base [t|PathError|])
-$(safeCopyInstance 3 'base [t|Op|])
-$(safeCopyInstance 2 'base [t|Edit|])
-$(safeCopyInstance 2 'base [t|EditError|])
+instance (SafeCopy' k, SafeCopy' v, SafeCopy' a, SafeCopy' t, SafeCopy' s) => SafeCopy (Op k v a t s) where version = 3
+instance (SafeCopy' k, SafeCopy' v, SafeCopy' a, SafeCopy' t, SafeCopy' s) => SafeCopy (Edit k v a t s) where version = 2
+instance (SafeCopy' k, SafeCopy' v, SafeCopy' a, SafeCopy' t, SafeCopy' s) => SafeCopy (EditError k v a t s) where version = 2; errorTypeName _ = "EditError"
 $(safeCopyInstance 2 'base [t|EventId|])
-$(safeCopyInstance 4 'base [t|Event|])
-$(safeCopyInstance 3 'base [t|EventTree|])
-$(safeCopyInstance 1 'base [t|HistoryTree_1|])
+instance (SafeCopy' k, SafeCopy' v, SafeCopy' a, SafeCopy' t, SafeCopy' s) => SafeCopy (Event k v a t s) where version = 4
+instance (SafeCopy' t, SafeCopy' s) => SafeCopy (EventTree t s) where version = 3
+instance (SafeCopy' t, SafeCopy' s) => SafeCopy (HistoryTree_1 t s)
 -- Because Order_0 has a deriving Data instance, and that Data
 -- instance has an Ord k constraint, this SafeCopy instance also needs
 -- an Ord constraint on k.  So we need to collect the constraints on
@@ -153,7 +152,7 @@ $(safeCopyInstance 1 'base [t|HistoryTree_1|])
 -- $(safeCopyInstance 0 'base [t|Order_0|])
 -- $(safeCopyInstance 1 'extension [t|VMap|])
 
-$(safeCopyInstance 1 'base [t|History|])
+instance (SafeCopy' t, SafeCopy' s) => SafeCopy (History t s)
 $(safeCopyInstance 1 'base [t|ReportID|])
 -- $(safeCopyInstance 1 'base [t|Report|])
 -- $(safeCopyInstance 1 'base [t|ReportMap|])
