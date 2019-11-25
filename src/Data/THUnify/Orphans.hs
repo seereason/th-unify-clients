@@ -12,7 +12,7 @@
 module Data.THUnify.Orphans where
 
 import Data.ByteString (ByteString)
-import Data.ListLike as LL
+import Data.ListLike as LL hiding (show)
 import Data.Proxy (Proxy(Proxy))
 import Data.Text (pack, unpack)
 import Extra.Orphans ()
